@@ -1,0 +1,7 @@
+#module load vcs
+#module load verdi
+
+vcs -R +vcs+dumpvars -timescale=1ns/1ps -P /global/apps/verdi_2016.06-SP1-1/share/PLI/VCS/LINUX/verdi.tab /global/apps/verdi_2016.06-SP1-1/share/PLI/VCS/LINUX/pli.a -l vcs.log -f rtl/list.f
+
+#verdi -nologo -f rtl/list.f -ssf core.fsdb &
+#-sswr debug.rc &
