@@ -95,8 +95,10 @@ always @(posedge clk or negedge rstn) begin
     end
 end
 
-assign data_pos_edge        = enable_search_pos ? data_r[1]&(!data_r[2]) : 1'b0;
-assign data_neg_edge        = enable_search_neg ? data_r[2]&(!data_r[1]) : 1'b0;
+//assign data_pos_edge        = enable_search_pos ? data_r[1]&(!data_r[2]) : 1'b0;
+//assign data_neg_edge        = enable_search_neg ? data_r[2]&(!data_r[1]) : 1'b0;
+assign data_pos_edge        = data_r[1]&(!data_r[2]);
+assign data_neg_edge        = data_r[2]&(!data_r[1]);
 assign data_for_check       = data_r[1];
 
 //assign data_pos_edge        = valid_data&(!data_r[0]);
@@ -179,7 +181,7 @@ always @(posedge clk or negedge rstn) begin
     end
 end
 
-assign sample_en    = (cnt_for_sample==(clk_sync_cnt>>1)) ? 1'b1 : 1'b0;
+assign sample_en    = (cnt_for_sample==(clk_sync_cnt-5'd4)) ? 1'b1 : 1'b0;
 
 // sampled data [8:1] data, [0:0] parity
 always @(posedge clk or negedge rstn) begin
