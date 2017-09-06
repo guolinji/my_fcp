@@ -107,6 +107,7 @@ inout               data;
 
 parameter MULT_125K     = 8;
 parameter UI_CYCLE      = 20*MULT_125K;
+parameter Q_UI_CYCLE    = UI_CYCLE/4;
 
 localparam RW_IDLE         = 2'b00;
 localparam RW_STATE0       = 2'b01;
@@ -226,7 +227,7 @@ always @(posedge clk or negedge rstn) begin
         tx_ongoing_window <= 1'b0;
     end else if (cycle_cnt_after_ping == UI_CYCLE*3 & after_mst_ping) begin
         tx_ongoing_window <= 1'b1;
-    end else if (cycle_cnt_after_ping == UI_CYCLE*3.5 & !after_mst_ping & !mst_request_after_slv_ping) begin
+    end else if (cycle_cnt_after_ping == (UI_CYCLE*3 + Q_UI_CYCLE) & !after_mst_ping & !mst_request_after_slv_ping) begin
         tx_ongoing_window <= 1'b1;
     end else if (cycle_cnt_after_ping == UI_CYCLE*5 & !slv_request_after_ping) begin
         tx_ongoing_window <= 1'b0;
