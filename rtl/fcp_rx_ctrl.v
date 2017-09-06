@@ -50,6 +50,7 @@ output          rx_data_valid;          // rx_data is valid. will not enable eit
 
 parameter   UI_CYCLE        = 160;
 parameter Q_UI_CYCLE        = UI_CYCLE/4;
+parameter E_UI_CYCLE        = UI_CYCLE/8;
 parameter PINT_CYCLE        = UI_CYCLE*16;
 parameter REST_CYCLE        = UI_CYCLE*100;
 
@@ -136,7 +137,7 @@ always @(posedge clk or negedge rstn) begin
         dur_cnt <= 32'b0;
     end else if (data_neg_edge) begin   //reset the count at the end of a pulse
         dur_cnt <= 32'b0;
-    end else if (dur_cnt==REST_CYCLE*1.5) begin
+    end else if (dur_cnt==(REST_CYCLE+UI_CYCLE*30)) begin
         dur_cnt <= dur_cnt;
     end else if (data_for_check) begin
         dur_cnt <= dur_cnt + 1;
@@ -146,9 +147,9 @@ end
 //assign quarter_pulse        = data_neg_edge ? (dur_cnt<7) : 1'b0;                       // 1/4 UI Pulse
 //assign ping_from_master     = data_neg_edge ? (dur_cnt>=261 && dur_cnt<=392) : 1'b0;
 //assign reset_from_master    = data_neg_edge ? (dur_cnt>=1630) : 1'b0;
-assign quarter_pulse        = data_neg_edge ? (dur_cnt>=(Q_UI_CYCLE*0.8) && dur_cnt<=(Q_UI_CYCLE*1.2)) : 1'b0;                       // 1/4 UI Pulse
-assign ping_from_master     = data_neg_edge ? (dur_cnt>=(PINT_CYCLE*0.8) && dur_cnt<=(PINT_CYCLE*1.2)) : 1'b0;
-assign reset_from_master    = data_neg_edge ? (dur_cnt>=(REST_CYCLE*0.8) && dur_cnt<=(REST_CYCLE*1.2)) : 1'b0;
+assign quarter_pulse        = data_neg_edge ? (dur_cnt>=(Q_UI_CYCLE-E_UI_CYCLE) && dur_cnt<=(Q_UI_CYCLE+E_UI_CYCLE)) : 1'b0;                       // 1/4 UI Pulse
+assign ping_from_master     = data_neg_edge ? (dur_cnt>=(PINT_CYCLE-UI_CYCLE*4) && dur_cnt<=(PINT_CYCLE+UI_CYCLE*4)) : 1'b0;
+assign reset_from_master    = data_neg_edge ? (dur_cnt>=(REST_CYCLE-UI_CYCLE*20) && dur_cnt<=(REST_CYCLE+UI_CYCLE*20)) : 1'b0;
 
 // Low quarter pulse cnt
 // begins when a quarter_pulse is dectected
@@ -158,14 +159,14 @@ always @(posedge clk or negedge rstn) begin
         low_dur_cnt <= 32'b0;
     end else if (data_pos_edge) begin                                   // start count when a high 1/4 pulse is detected
         low_dur_cnt <= 32'b0;
-    end else if (low_dur_cnt==Q_UI_CYCLE*1.2) begin                                   // start count when a high 1/4 pulse is detected
+    end else if (low_dur_cnt==(Q_UI_CYCLE+E_UI_CYCLE)) begin                                   // start count when a high 1/4 pulse is detected
         low_dur_cnt <= low_dur_cnt;
     end else if (!data_for_check) begin
         low_dur_cnt <= low_dur_cnt + 1;
     end
 end
 
-assign low_quarter_pulse    = data_pos_edge ? (low_dur_cnt>=(Q_UI_CYCLE*0.8) && low_dur_cnt<=(Q_UI_CYCLE*1.2)) : 1'b0;
+assign low_quarter_pulse    = data_pos_edge ? (low_dur_cnt>=(Q_UI_CYCLE-E_UI_CYCLE) && low_dur_cnt<=(Q_UI_CYCLE+E_UI_CYCLE)) : 1'b0;
 
 // Clock sync cnt
 always @(posedge clk or negedge rstn) begin
