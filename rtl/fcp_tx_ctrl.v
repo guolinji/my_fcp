@@ -42,7 +42,7 @@ input   [15:0]  tx_data;            // tx data
 output          data;               // single bit for communication
 output          tx_done;            // data has been transmitted
 
-localparam UI_CYCLE         = 5'd20;
+parameter UI_CYCLE         = 160;
 
 localparam TX_IDLE         = 2'b00;
 localparam TX_PING         = 2'b01;
@@ -55,8 +55,8 @@ localparam TX_DATA         = 2'b11;
 reg             tx_en_r;                    // reg for tx_en
 reg             tx_start;                   // start of trans
 wire            tx_init;
-reg     [4:0]   cycle_cnt_for_UI;           // clock cnt for UI
-reg     [2:0]   cycle_cnt_for_quarter_UI;   // clock cnt for 1/4 UI
+reg     [31:0]  cycle_cnt_for_UI;           // clock cnt for UI
+reg     [31:0]  cycle_cnt_for_quarter_UI;   // clock cnt for 1/4 UI
 reg     [3:0]   UI_cnt;                     // UI cnt
 wire            UI_end;                     // UI end
 wire            sixteen_UI_end;             // 16 UI end
@@ -101,13 +101,13 @@ end
 // UI cycle cnt -> 20 cycle
 always @(posedge clk or negedge rstn) begin
     if (!rstn) begin
-        cycle_cnt_for_UI <= 5'b0;
+        cycle_cnt_for_UI <= 32'b0;
     end else if (tx_nxt_st==TX_IDLE) begin
-        cycle_cnt_for_UI <= 5'b0;
+        cycle_cnt_for_UI <= 32'b0;
     end else if (UI_end | quarter_UI_end) begin
-        cycle_cnt_for_UI <= 5'b1;
+        cycle_cnt_for_UI <= 32'b1;
     end else begin
-        cycle_cnt_for_UI <= cycle_cnt_for_UI + 5'b1;
+        cycle_cnt_for_UI <= cycle_cnt_for_UI + 32'b1;
     end
 end
 
@@ -124,13 +124,13 @@ end
 // 1/4 UI cycle cnt -> 5 cycle
 always @(posedge clk or negedge rstn) begin
     if (!rstn) begin
-        cycle_cnt_for_quarter_UI <= 3'b0;
+        cycle_cnt_for_quarter_UI <= 32'b0;
     end else if (start_tx_data_bit | tx_done) begin
-        cycle_cnt_for_quarter_UI <= 3'b0;
+        cycle_cnt_for_quarter_UI <= 32'b0;
     end else if (quarter_UI_end) begin
-        cycle_cnt_for_quarter_UI <= 3'b1;
+        cycle_cnt_for_quarter_UI <= 32'b1;
     end else if (tx_nxt_st==TX_QUARTER_UI) begin
-        cycle_cnt_for_quarter_UI <= cycle_cnt_for_quarter_UI + 3'b1;
+        cycle_cnt_for_quarter_UI <= cycle_cnt_for_quarter_UI + 32'b1;
     end
 end
 

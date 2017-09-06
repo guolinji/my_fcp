@@ -105,6 +105,9 @@ output              tx_done;
 
 inout               data;
 
+parameter MULT_125K     = 8;
+parameter UI_CYCLE      = 20*MULT_125K;
+
 localparam RW_IDLE         = 2'b00;
 localparam RW_STATE0       = 2'b01;
 localparam RW_STATE1       = 2'b10;
@@ -124,7 +127,7 @@ reg         tx_en_flag;
 reg         tx_en;
 reg         tx_type;
 reg [15:0]  tx_data;
-reg [6:0]   cycle_cnt_after_ping;
+reg [31:0]  cycle_cnt_after_ping;
 reg         after_mst_ping;
 reg         mst_request_after_slv_ping;
 reg         slv_request_after_ping;
@@ -151,7 +154,7 @@ end
 always @(posedge clk or negedge rstn) begin
     if (!rstn) begin
         tx_en <= 1'b0;
-    end else if (tx_en_flag & tx_ongoing_window & cycle_cnt_after_ping>20) begin
+    end else if (tx_en_flag & tx_ongoing_window & cycle_cnt_after_ping>UI_CYCLE) begin
         tx_en <= 1'b1;
     end else begin
         tx_en <= 1'b0;
@@ -174,13 +177,13 @@ end
 // 1 UI = 20 cycle, cnt 5 UI
 always @(posedge clk or negedge rstn) begin
     if (!rstn) begin
-        cycle_cnt_after_ping <= 7'b0;
+        cycle_cnt_after_ping <= 32'b0;
     end else if (ping_from_master | tx_done) begin
-        cycle_cnt_after_ping <= 7'b1;
-    end else if (cycle_cnt_after_ping == 7'd100) begin
-        cycle_cnt_after_ping <= 7'b0;
+        cycle_cnt_after_ping <= 32'b1;
+    end else if (cycle_cnt_after_ping == UI_CYCLE*5) begin
+        cycle_cnt_after_ping <= 32'b0;
     end else if (|cycle_cnt_after_ping) begin
-        cycle_cnt_after_ping <= cycle_cnt_after_ping + 7'b1;
+        cycle_cnt_after_ping <= cycle_cnt_after_ping + 32'b1;
     end
 end
 
@@ -189,7 +192,7 @@ always @(posedge clk or negedge rstn) begin
         after_mst_ping <= 1'b0;
     end else if (ping_from_master) begin
         after_mst_ping <= 1'b1;
-    end else if (cycle_cnt_after_ping == 7'd100) begin
+    end else if (cycle_cnt_after_ping == UI_CYCLE*5) begin
         after_mst_ping <= 1'b0;
     end
 end
@@ -197,21 +200,21 @@ end
 always @(posedge clk or negedge rstn) begin
     if (!rstn) begin
         mst_request_after_slv_ping <= 1'b0;
-    end else if (data_in & (cycle_cnt_after_ping>20 && cycle_cnt_after_ping<40)) begin
+    end else if (data_in & (cycle_cnt_after_ping>UI_CYCLE && cycle_cnt_after_ping<UI_CYCLE*2)) begin
         mst_request_after_slv_ping <= 1'b1;
-    end else if (cycle_cnt_after_ping == 7'd100) begin
+    end else if (cycle_cnt_after_ping == UI_CYCLE*5) begin
         mst_request_after_slv_ping <= 1'b0;
     end
 end
 
-assign after_mst_ping_slv_req = tx_en_flag & (after_mst_ping && cycle_cnt_after_ping>20 && cycle_cnt_after_ping<100);
-assign after_slv_ping_slv_req = tx_en_flag & (!after_mst_ping && cycle_cnt_after_ping>60 && cycle_cnt_after_ping<100);
+assign after_mst_ping_slv_req = tx_en_flag & (after_mst_ping && cycle_cnt_after_ping>UI_CYCLE && cycle_cnt_after_ping<UI_CYCLE*5);
+assign after_slv_ping_slv_req = tx_en_flag & (!after_mst_ping && cycle_cnt_after_ping>UI_CYCLE*3 && cycle_cnt_after_ping<UI_CYCLE*5);
 always @(posedge clk or negedge rstn) begin
     if (!rstn) begin
         slv_request_after_ping <= 1'b0;
     end else if (after_mst_ping_slv_req | after_slv_ping_slv_req) begin
         slv_request_after_ping <= 1'b1;
-    end else if (cycle_cnt_after_ping == 7'd100) begin
+    end else if (cycle_cnt_after_ping == UI_CYCLE*5) begin
         slv_request_after_ping <= 1'b0;
     end
 end
@@ -219,13 +222,13 @@ end
 always @(posedge clk or negedge rstn) begin
     if (!rstn) begin
         tx_ongoing_window <= 1'b0;
-    end else if (cycle_cnt_after_ping == 20) begin
+    end else if (cycle_cnt_after_ping == UI_CYCLE) begin
         tx_ongoing_window <= 1'b0;
-    end else if (cycle_cnt_after_ping == 60 & after_mst_ping) begin
+    end else if (cycle_cnt_after_ping == UI_CYCLE*3 & after_mst_ping) begin
         tx_ongoing_window <= 1'b1;
-    end else if (cycle_cnt_after_ping == 70 & !after_mst_ping & !mst_request_after_slv_ping) begin
+    end else if (cycle_cnt_after_ping == UI_CYCLE*3.5 & !after_mst_ping & !mst_request_after_slv_ping) begin
         tx_ongoing_window <= 1'b1;
-    end else if (cycle_cnt_after_ping == 99 & !slv_request_after_ping) begin
+    end else if (cycle_cnt_after_ping == UI_CYCLE*5 & !slv_request_after_ping) begin
         tx_ongoing_window <= 1'b0;
     end
 end
@@ -235,7 +238,7 @@ always @(posedge clk or negedge rstn) begin
         tx_ongoing_d0 <= 1'b0;
     end else if (tx_ongoing_window==1'b0) begin
         tx_ongoing_d0 <= 1'b0;
-    end else if (!slv_request_after_ping & (cycle_cnt_after_ping>=80 & cycle_cnt_after_ping<=99)) begin
+    end else if (!slv_request_after_ping & (cycle_cnt_after_ping>=UI_CYCLE*4 & cycle_cnt_after_ping<=UI_CYCLE*5)) begin
         tx_ongoing_d0 <= 1'b0;
     end else begin
         tx_ongoing_d0 <= tx_ongoing_window;
@@ -259,7 +262,7 @@ assign rd_en  = ~out_en;
 //              Rx
 //========================================================================================
 //========================================================================================
-fcp_rx_ctrl U_RX_CTRL (
+fcp_rx_ctrl #(.UI_CYCLE(UI_CYCLE)) U_RX_CTRL (
     // I
      .clk               (clk)
     ,.rstn              (rstn)
@@ -279,7 +282,7 @@ fcp_rx_ctrl U_RX_CTRL (
 //              Tx
 //========================================================================================
 //========================================================================================
-fcp_tx_ctrl U_TX_CTRL (
+fcp_tx_ctrl #(.UI_CYCLE(UI_CYCLE)) U_TX_CTRL (
     // I
      .clk       (clk)
     ,.rstn      (rstn)

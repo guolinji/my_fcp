@@ -48,10 +48,15 @@ output          par_error;
 output  [23:0]  rx_data;                // 32 bit data received
 output          rx_data_valid;          // rx_data is valid. will not enable either parity error or crc error
 
+parameter   UI_CYCLE        = 160;
+parameter Q_UI_CYCLE        = UI_CYCLE/4;
+parameter PINT_CYCLE        = UI_CYCLE*16;
+parameter REST_CYCLE        = UI_CYCLE*100;
+
 //================================
 // Signals
 //================================
-reg     [10:0]  dur_cnt;
+reg     [31:0]  dur_cnt;
 reg     [2:0]   data_r;
 wire            valid_data;
 wire            data_pos_edge;
@@ -59,10 +64,10 @@ wire            data_neg_edge;
 wire            quarter_pulse;
 wire            ping_from_master;
 wire            reset_from_master;
-reg     [2:0]   low_dur_cnt;
+reg     [31:0]   low_dur_cnt;
 wire            low_quarter_pulse;
-reg     [4:0]   clk_sync_cnt;
-reg     [4:0]   cnt_for_sample;
+reg     [31:0]   clk_sync_cnt;
+reg     [31:0]   cnt_for_sample;
 wire            sample_en;
 reg     [8:0]   sample_data;
 reg     [3:0]   sample_num;
@@ -79,8 +84,8 @@ reg             rx_end_r;
 wire    [7:0]   crc_data;
 wire            crc_pass;
 wire            rx_data_valid;
-reg             enable_search_pos;
-reg             enable_search_neg;
+//reg             enable_search_pos;
+//reg             enable_search_neg;
 
 //========================================================================================
 //              Main State
@@ -105,62 +110,67 @@ assign data_for_check       = data_r[1];
 //assign data_neg_edge        = data_r[0]&(!valid_data);
 //assign data_for_check       = valid_data;
 
-always @(posedge clk or negedge rstn) begin
-    if (!rstn) begin
-        enable_search_pos <= 1'b0;
-    end else if (quarter_pulse) begin
-        enable_search_pos <= 1'b1;
-    end else if (rx_end) begin
-        enable_search_pos <= 1'b0;
-    end
-end
-
-always @(posedge clk or negedge rstn) begin
-    if (!rstn) begin
-        enable_search_neg <= 1'b0;
-    end else if (dur_cnt==1) begin
-        enable_search_neg <= 1'b1;
-    end else if (rx_end | ping_from_master | reset_from_master) begin
-        enable_search_neg <= 1'b0;
-    end
-end
+//always @(posedge clk or negedge rstn) begin
+//    if (!rstn) begin
+//        enable_search_pos <= 1'b0;
+//    end else if (quarter_pulse) begin
+//        enable_search_pos <= 1'b1;
+//    end else if (rx_end) begin
+//        enable_search_pos <= 1'b0;
+//    end
+//end
+//
+//always @(posedge clk or negedge rstn) begin
+//    if (!rstn) begin
+//        enable_search_neg <= 1'b0;
+//    end else if (dur_cnt==1) begin
+//        enable_search_neg <= 1'b1;
+//    end else if (rx_end | ping_from_master | reset_from_master) begin
+//        enable_search_neg <= 1'b0;
+//    end
+//end
 
 // UI = 20 clock cycle
 always @(posedge clk or negedge rstn) begin
     if (!rstn) begin
-        dur_cnt <= 11'b0;
+        dur_cnt <= 32'b0;
     end else if (data_neg_edge) begin   //reset the count at the end of a pulse
-        dur_cnt <= 11'b0;
+        dur_cnt <= 32'b0;
+    end else if (dur_cnt==REST_CYCLE*1.5) begin
+        dur_cnt <= dur_cnt;
     end else if (data_for_check) begin
         dur_cnt <= dur_cnt + 1;
     end
 end
 
-assign quarter_pulse        = data_neg_edge ? (dur_cnt<7) : 1'b0;                       // 1/4 UI Pulse
-assign ping_from_master     = data_neg_edge ? (dur_cnt>=261 && dur_cnt<=392) : 1'b0;
-assign reset_from_master    = data_neg_edge ? (dur_cnt>=1630) : 1'b0;
+//assign quarter_pulse        = data_neg_edge ? (dur_cnt<7) : 1'b0;                       // 1/4 UI Pulse
+//assign ping_from_master     = data_neg_edge ? (dur_cnt>=261 && dur_cnt<=392) : 1'b0;
+//assign reset_from_master    = data_neg_edge ? (dur_cnt>=1630) : 1'b0;
+assign quarter_pulse        = data_neg_edge ? (dur_cnt>=(Q_UI_CYCLE*0.8) && dur_cnt<=(Q_UI_CYCLE*1.2)) : 1'b0;                       // 1/4 UI Pulse
+assign ping_from_master     = data_neg_edge ? (dur_cnt>=(PINT_CYCLE*0.8) && dur_cnt<=(PINT_CYCLE*1.2)) : 1'b0;
+assign reset_from_master    = data_neg_edge ? (dur_cnt>=(REST_CYCLE*0.8) && dur_cnt<=(REST_CYCLE*1.2)) : 1'b0;
 
 // Low quarter pulse cnt
 // begins when a quarter_pulse is dectected
 // stops when the next posedge is dectected
 always @(posedge clk or negedge rstn) begin
     if (!rstn) begin
-        low_dur_cnt <= 3'b0;
+        low_dur_cnt <= 32'b0;
     end else if (data_pos_edge) begin                                   // start count when a high 1/4 pulse is detected
-        low_dur_cnt <= 3'b0;
-    end else if (low_dur_cnt==7) begin                                   // start count when a high 1/4 pulse is detected
-        low_dur_cnt <= 7;
+        low_dur_cnt <= 32'b0;
+    end else if (low_dur_cnt==Q_UI_CYCLE*1.2) begin                                   // start count when a high 1/4 pulse is detected
+        low_dur_cnt <= low_dur_cnt;
     end else if (!data_for_check) begin
         low_dur_cnt <= low_dur_cnt + 1;
     end
 end
 
-assign low_quarter_pulse    = data_pos_edge ? (low_dur_cnt<7) : 1'b0;
+assign low_quarter_pulse    = data_pos_edge ? (low_dur_cnt>=(Q_UI_CYCLE*0.8) && low_dur_cnt<=(Q_UI_CYCLE*1.2)) : 1'b0;
 
 // Clock sync cnt
 always @(posedge clk or negedge rstn) begin
     if (!rstn) begin
-        clk_sync_cnt <= 5'b0;
+        clk_sync_cnt <= 32'b0;
     end else if (ping_from_master) begin     // 16 UI master ping
         clk_sync_cnt <= dur_cnt>>4;
     //end else if (parity_en) begin               // 1/4 UI Sync
@@ -171,17 +181,17 @@ end
 // Count for 1 UI, sample at 1/2 UI
 always @(posedge clk or negedge rstn) begin
     if (!rstn) begin
-        cnt_for_sample <= 5'b1;
+        cnt_for_sample <= 32'b1;
     end else if (cnt_for_sample==clk_sync_cnt) begin
-        cnt_for_sample <= 5'b1;
+        cnt_for_sample <= 32'b1;
     end else if (quarter_pulse | low_quarter_pulse) begin
-        cnt_for_sample <= 5'b1;
+        cnt_for_sample <= 32'b1;
     end else if (rx_st) begin
         cnt_for_sample <= cnt_for_sample + 1;
     end
 end
 
-assign sample_en    = (cnt_for_sample==(clk_sync_cnt-5'd4)) ? 1'b1 : 1'b0;
+assign sample_en    = (cnt_for_sample==(clk_sync_cnt-Q_UI_CYCLE)) ? 1'b1 : 1'b0;
 
 // sampled data [8:1] data, [0:0] parity
 always @(posedge clk or negedge rstn) begin
