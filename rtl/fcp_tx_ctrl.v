@@ -26,6 +26,8 @@ module fcp_tx_ctrl (
     tx_en,
     tx_type,
     tx_data,
+    tune_up,
+    tune_cycle,
     // O
     data,
     tx_done
@@ -39,10 +41,12 @@ input           rstn;
 input           tx_en;              // tx enable -> level signal
 input           tx_type;            // 0: slave ping    1: data
 input   [15:0]  tx_data;            // tx data
+input           tune_up;
+input   [7:0]   tune_cycle;
 output          data;               // single bit for communication
 output          tx_done;            // data has been transmitted
 
-parameter UI_CYCLE         = 160;
+parameter UI_CYCLE         = 20;
 
 localparam TX_IDLE         = 2'b00;
 localparam TX_PING         = 2'b01;
@@ -55,6 +59,7 @@ localparam TX_DATA         = 2'b11;
 reg             tx_en_r;                    // reg for tx_en
 reg             tx_start;                   // start of trans
 wire            tx_init;
+wire    [31:0]  UI_cycle_tuned;
 reg     [31:0]  cycle_cnt_for_UI;           // clock cnt for UI
 reg     [31:0]  cycle_cnt_for_quarter_UI;   // clock cnt for 1/4 UI
 reg     [3:0]   UI_cnt;                     // UI cnt
@@ -134,8 +139,11 @@ always @(posedge clk or negedge rstn) begin
     end
 end
 
-assign UI_end           = cycle_cnt_for_UI==UI_CYCLE;
-assign quarter_UI_end   = cycle_cnt_for_quarter_UI==(UI_CYCLE/4);
+assign UI_cycle_tuned   = tune_up ? UI_CYCLE+tune_cycle : UI_CYCLE-tune_cycle;
+assign UI_end           = cycle_cnt_for_UI==UI_cycle_tuned;
+assign quarter_UI_end   = cycle_cnt_for_quarter_UI==(UI_cycle_tuned/4);
+//assign UI_end           = cycle_cnt_for_UI==UI_CYCLE;
+//assign quarter_UI_end   = cycle_cnt_for_quarter_UI==(UI_CYCLE/4);
 assign sixteen_UI_end   = UI_end && (UI_cnt==4'hf);
 assign one_byte_send    = tx_type_reg && UI_end && (UI_cnt==4'd8);
 
@@ -281,4 +289,6 @@ fcp_crc U_CRC (
 );
 
 endmodule
+
+
 

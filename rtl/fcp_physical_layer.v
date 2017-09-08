@@ -132,6 +132,8 @@ reg [31:0]  cycle_cnt_after_ping;
 reg         after_mst_ping;
 reg         mst_request_after_slv_ping;
 reg         slv_request_after_ping;
+wire        tune_up;
+wire [7:0]  tune_cycle;
 
 //========================================================================================
 //========================================================================================
@@ -270,6 +272,8 @@ fcp_rx_ctrl #(.UI_CYCLE(UI_CYCLE)) U_RX_CTRL (
     ,.data              (data_in)
     ,.rx_own_bus        (rd_en)
     // O
+    ,.tune_up           (tune_up)
+    ,.tune_cycle        (tune_cycle)
     ,.ping_from_master  (ping_from_master)
     ,.reset_from_master (reset_from_master)
     ,.crc_error         (crc_error)
@@ -290,6 +294,8 @@ fcp_tx_ctrl #(.UI_CYCLE(UI_CYCLE)) U_TX_CTRL (
     ,.tx_en     (tx_en)
     ,.tx_type   (tx_type)
     ,.tx_data   (tx_data)
+    ,.tune_up           (tune_up)
+    ,.tune_cycle        (tune_cycle)
     // O
     ,.data      (data_out)
     ,.tx_done   (tx_done)
@@ -297,4 +303,6 @@ fcp_tx_ctrl #(.UI_CYCLE(UI_CYCLE)) U_TX_CTRL (
 
 
 endmodule
+
+
 

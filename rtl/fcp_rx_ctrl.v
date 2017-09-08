@@ -26,6 +26,8 @@ module fcp_rx_ctrl (
     data,
     rx_own_bus,
     // O
+    tune_up,
+    tune_cycle,
     ping_from_master,
     reset_from_master,
     crc_error,
@@ -41,6 +43,8 @@ input           clk;
 input           rstn;
 input           data;                   // single bit for communication
 input           rx_own_bus;             // master own the bus
+output          tune_up;
+output [7:0]    tune_cycle;
 output          ping_from_master;       // get master ping
 output          reset_from_master;      // get master reset
 output          crc_error;
@@ -51,7 +55,7 @@ output          rx_data_valid;          // rx_data is valid. will not enable eit
 parameter   UI_CYCLE        = 160;
 parameter Q_UI_CYCLE        = UI_CYCLE/4;
 parameter E_UI_CYCLE        = UI_CYCLE/8;
-parameter PINT_CYCLE        = UI_CYCLE*16;
+parameter PING_CYCLE        = UI_CYCLE*16;
 parameter REST_CYCLE        = UI_CYCLE*100;
 
 //================================
@@ -85,6 +89,8 @@ reg             rx_end_r;
 wire    [7:0]   crc_data;
 wire            crc_pass;
 wire            rx_data_valid;
+reg     [7:0]   tune_cycle;
+reg             tune_up;
 //reg             enable_search_pos;
 //reg             enable_search_neg;
 
@@ -148,8 +154,18 @@ end
 //assign ping_from_master     = data_neg_edge ? (dur_cnt>=261 && dur_cnt<=392) : 1'b0;
 //assign reset_from_master    = data_neg_edge ? (dur_cnt>=1630) : 1'b0;
 assign quarter_pulse        = data_neg_edge ? (dur_cnt>=(Q_UI_CYCLE-E_UI_CYCLE) && dur_cnt<=(Q_UI_CYCLE+E_UI_CYCLE)) : 1'b0;                       // 1/4 UI Pulse
-assign ping_from_master     = data_neg_edge ? (dur_cnt>=(PINT_CYCLE-UI_CYCLE*4) && dur_cnt<=(PINT_CYCLE+UI_CYCLE*4)) : 1'b0;
+assign ping_from_master     = data_neg_edge ? (dur_cnt>=(PING_CYCLE-UI_CYCLE*4) && dur_cnt<=(PING_CYCLE+UI_CYCLE*4)) : 1'b0;
 assign reset_from_master    = data_neg_edge ? (dur_cnt>=(REST_CYCLE-UI_CYCLE*20) && dur_cnt<=(REST_CYCLE+UI_CYCLE*20)) : 1'b0;
+
+always @(posedge clk or negedge rstn) begin
+    if (!rstn) begin
+        tune_cycle     <= 8'b0;
+        tune_up        <= 1'b0;
+    end else if (ping_from_master) begin
+        tune_cycle     <= dur_cnt > PING_CYCLE ? (dur_cnt-PING_CYCLE)>>4 : (PING_CYCLE-dur_cnt)>>4;
+        tune_up        <= dur_cnt > PING_CYCLE;
+    end
+end
 
 // Low quarter pulse cnt
 // begins when a quarter_pulse is dectected
@@ -285,4 +301,6 @@ assign crc_error        = rx_data_valid & (!crc_pass);
 assign par_error        = parity_en & (!parity_pass);
 
 endmodule
+
+
 
