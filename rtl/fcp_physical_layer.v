@@ -73,10 +73,12 @@ module fcp_physical_layer (
     // I
     pl_tx_en,
     pl_tx_type,
+    pl_tx_afc,
     pl_tx_data,
     // O
     ping_from_master,
     reset_from_master,
+    afc_iden,
     crc_error,
     par_error,
     rx_data,
@@ -93,10 +95,12 @@ input               clk;
 input               rstn;
 input               pl_tx_en;
 input               pl_tx_type;
+input               pl_tx_afc;
 input       [15:0]  pl_tx_data;
 
 output              ping_from_master;
 output              reset_from_master;
+output              afc_iden;
 output              crc_error;
 output              par_error;
 output      [23:0]  rx_data;
@@ -127,6 +131,7 @@ wire        data_in;
 reg         tx_en_flag;
 reg         tx_en;
 reg         tx_type;
+reg         tx_afc;
 reg [15:0]  tx_data;
 reg [31:0]  cycle_cnt_after_ping;
 reg         after_mst_ping;
@@ -167,12 +172,15 @@ end
 always @(posedge clk or negedge rstn) begin
     if (!rstn) begin
         tx_type <= 1'b0;
+        tx_afc  <= 1'b0;
         tx_data <= 16'b0;
     end else if (pl_tx_en) begin
         tx_type <= pl_tx_type;
+        tx_afc  <= pl_tx_afc;
         tx_data <= pl_tx_data;
     end else if (mst_request_after_slv_ping) begin
         tx_type <= 1'b0;
+        tx_afc  <= 1'b0;
         tx_data <= pl_tx_data;
     end
 end
@@ -276,6 +284,7 @@ fcp_rx_ctrl #(.UI_CYCLE(UI_CYCLE)) U_RX_CTRL (
     ,.tune_cycle        (tune_cycle)
     ,.ping_from_master  (ping_from_master)
     ,.reset_from_master (reset_from_master)
+    ,.afc_iden          (afc_iden)
     ,.crc_error         (crc_error)
     ,.par_error         (par_error)
     ,.rx_data           (rx_data)
@@ -293,6 +302,7 @@ fcp_tx_ctrl #(.UI_CYCLE(UI_CYCLE)) U_TX_CTRL (
     ,.rstn      (rstn)
     ,.tx_en     (tx_en)
     ,.tx_type   (tx_type)
+    ,.tx_afc    (tx_afc)
     ,.tx_data   (tx_data)
     ,.tune_up           (tune_up)
     ,.tune_cycle        (tune_cycle)

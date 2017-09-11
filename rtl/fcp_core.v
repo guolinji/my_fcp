@@ -51,6 +51,7 @@ wire            rx_data_valid;
 wire            tx_done;
 wire            pl_tx_en;
 wire            pl_tx_type;
+wire            pl_tx_afc;
 wire [15:0]     pl_tx_data;
 wire [1:0]      out_volt;
 
@@ -61,6 +62,7 @@ fcp_logical_layer U_FCP_LOGICAL_LAYER (
         ,.is_support_12v        (is_support_12v)
         ,.ping_from_master      (ping_from_master)
         ,.reset_from_master     (reset_from_master)
+        ,.afc_iden              (afc_iden)
         ,.crc_error             (crc_error)
         ,.par_error             (par_error)
         ,.rx_data               (rx_data)
@@ -69,6 +71,7 @@ fcp_logical_layer U_FCP_LOGICAL_LAYER (
         // O
         ,.pl_tx_en              (pl_tx_en)
         ,.pl_tx_type            (pl_tx_type)
+        ,.pl_tx_afc             (pl_tx_afc)
         ,.pl_tx_data            (pl_tx_data)
         ,.out_volt              (out_volt)
         );
@@ -79,10 +82,12 @@ fcp_physical_layer U_FCP_PYSICAL_LAYER (
         // I
         ,.pl_tx_en              (pl_tx_en)
         ,.pl_tx_type            (pl_tx_type)
+        ,.pl_tx_afc             (pl_tx_afc)
         ,.pl_tx_data            (pl_tx_data)
         // O
         ,.ping_from_master      (ping_from_master)
         ,.reset_from_master     (reset_from_master)
+        ,.afc_iden              (afc_iden)
         ,.crc_error             (crc_error)
         ,.par_error             (par_error)
         ,.rx_data               (rx_data)

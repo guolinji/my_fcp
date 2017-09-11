@@ -33,7 +33,8 @@ module fcp_rx_ctrl (
     crc_error,
     par_error,
     rx_data,
-    rx_data_valid
+    rx_data_valid,
+    afc_iden
 );
 
 //================================
@@ -51,6 +52,7 @@ output          crc_error;
 output          par_error;
 output  [23:0]  rx_data;                // 32 bit data received
 output          rx_data_valid;          // rx_data is valid. will not enable either parity error or crc error
+output          afc_iden;
 
 parameter   UI_CYCLE        = 160;
 parameter Q_UI_CYCLE        = UI_CYCLE/4;
@@ -91,6 +93,7 @@ wire            crc_pass;
 wire            rx_data_valid;
 reg     [7:0]   tune_cycle;
 reg             tune_up;
+reg             afc_iden;
 //reg             enable_search_pos;
 //reg             enable_search_neg;
 
@@ -245,6 +248,16 @@ always @(posedge clk or negedge rstn) begin
         end else if (!parity_value) begin    // parity check fail
             parity_pass <= 1'b0;
         end
+    end
+end
+
+always @(posedge clk or negedge rstn) begin
+    if (!rstn) begin
+        afc_iden <= 1'b0;
+    end else if (rx_end&parity_pass) begin
+        afc_iden <= rx_data_with_crc=={24'b0, 8'b01000110};
+    end else begin
+        afc_iden <= 1'b0;
     end
 end
 

@@ -26,6 +26,7 @@ module fcp_logical_layer (
     is_support_12v,
     ping_from_master,
     reset_from_master,
+    afc_iden,
     crc_error,
     par_error,
     rx_data,
@@ -34,6 +35,7 @@ module fcp_logical_layer (
     // O
     pl_tx_en,
     pl_tx_type,
+    pl_tx_afc,
     pl_tx_data,
     out_volt
 );
@@ -46,6 +48,7 @@ input               rstn;
 input               is_support_12v;
 input               ping_from_master;
 input               reset_from_master;
+input               afc_iden;
 input               crc_error;
 input               par_error;
 input       [23:0]  rx_data;
@@ -54,6 +57,7 @@ input               tx_done;
 
 output              pl_tx_en;
 output              pl_tx_type;
+output              pl_tx_afc;
 output      [15:0]  pl_tx_data;
 output      [1:0]   out_volt; //00:5V    01:9v    10:12v    11:Reserved
 
@@ -103,9 +107,12 @@ reg [7:0]   data_for_rd_cmd;
 reg [15:0]  pl_tx_data;
 wire        pl_tx_en;
 wire        pl_tx_type;
+wire        pl_tx_afc;
 reg         cmd_get_but_not_process;
 wire        send_resp;
 wire        send_ping;
+reg         afc_pr;
+reg [1:0]   afc_cmd_cnt;
 
 reg [1:0]   cur_st;
 reg [1:0]   nxt_st;
@@ -121,6 +128,8 @@ always @(posedge clk or negedge rstn) begin // adjust volt
         end else if ((VOUT_CONFIG==8'd120) && is_support_12v) begin
             out_volt <= 2'b10; //12v
         end
+    end else if (afc_cmd_cnt==2'd3) begin
+        out_volt <= 2'b01;
     end
 end
 
@@ -350,10 +359,30 @@ always @(posedge clk or negedge rstn) begin
         cmd_get_but_not_process <= 1'b0;
     end else if (reset_from_master) begin
         cmd_get_but_not_process <= 1'b0;
-    end else if (rx_data_valid) begin
+    end else if (rx_data_valid|afc_iden) begin
         cmd_get_but_not_process <= 1'b1;
     end else if (send_resp) begin
         cmd_get_but_not_process <= 1'b0;
+    end
+end
+
+always @(posedge clk or negedge rstn) begin
+    if (!rstn) begin
+        afc_pr <= 1'b0;
+    end else if (afc_iden) begin
+        afc_pr <= 1'b1;
+    end else if (nxt_st==SLV_IDLE) begin
+        afc_pr <= 1'b0;
+    end
+end
+
+always @(posedge clk or negedge rstn) begin
+    if (!rstn) begin
+        afc_cmd_cnt <= 2'b0;
+    end else if (tx_done&afc_pr&!cmd_get_but_not_process) begin
+        afc_cmd_cnt <= afc_cmd_cnt + 2'b1;
+    end else if (rx_data_valid) begin
+        afc_cmd_cnt <= 2'b0;
     end
 end
 
@@ -403,6 +432,7 @@ assign send_ping    = (nxt_st==SLV_SEND_PING) & (cur_st==SLV_IDLE);
 assign send_resp    = (nxt_st==SLV_SEND_RESPOND) & (cur_st==SLV_SEND_PING);
 assign pl_tx_en     = send_ping | send_resp;
 assign pl_tx_type   = (nxt_st==SLV_SEND_RESPOND); // 0->PING  1->RESPOND
+assign pl_tx_afc    = (nxt_st==SLV_SEND_RESPOND) & afc_pr;
 
 endmodule
 

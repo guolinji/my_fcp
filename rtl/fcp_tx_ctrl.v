@@ -25,6 +25,7 @@ module fcp_tx_ctrl (
     // I
     tx_en,
     tx_type,
+    tx_afc,
     tx_data,
     tune_up,
     tune_cycle,
@@ -40,6 +41,7 @@ input           clk;
 input           rstn;
 input           tx_en;              // tx enable -> level signal
 input           tx_type;            // 0: slave ping    1: data
+input           tx_afc;
 input   [15:0]  tx_data;            // tx data
 input           tune_up;
 input   [7:0]   tune_cycle;
@@ -79,6 +81,7 @@ reg             data;
 reg     [1:0]   byte_cnt;
 reg     [15:0]  tx_data_reg;
 reg             tx_type_reg;
+reg             tx_afc_reg;
 reg             respond_rd;
 wire    [7:0]   crc_data;
 reg     [7:0]   data_for_tx;
@@ -156,8 +159,9 @@ always @(posedge clk or negedge rstn) begin
         tx_type_reg <= 1'b0;
         respond_rd  <= 1'b0;
     end else if (tx_init & tx_type) begin
-        tx_data_reg <= tx_data;
+        tx_data_reg <= tx_afc ? {8'h0, 8'b01000110} : tx_data;
         tx_type_reg <= tx_type;
+        tx_afc_reg  <= tx_afc;
         respond_rd  <= |tx_data[15:8];
     end
 end
@@ -172,7 +176,7 @@ always @(posedge clk or negedge rstn) begin
     end
 end
 
-assign tx_crc_finish    = respond_rd ? byte_cnt==2'd3 : byte_cnt==2'd2;
+assign tx_crc_finish    = tx_afc_reg ? byte_cnt==2'd1 : (respond_rd ? byte_cnt==2'd3 : byte_cnt==2'd2);
 
 // initial for the data
 always @(posedge clk or negedge rstn) begin
