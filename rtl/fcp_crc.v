@@ -1,4 +1,4 @@
-`timescale 1ns / 1ps
+`timescale 1us / 1ns
 //-----------------------------------------------------------------------------
 // Copyright (C) 2009 OutputLogic.com 
 // This source file may be used and distributed without restriction 
