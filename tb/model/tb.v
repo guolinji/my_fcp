@@ -1,6 +1,6 @@
 `timescale 1us / 1ns
 
-module testbench;
+module tb;
 
 localparam SCLK_PERIOD      = 0.5;
 localparam RST_TIME         = 10;
@@ -32,14 +32,17 @@ initial begin
     $fsdbDumpvars;
 end
 
-mst_model U_MST_MODEL ();
+wire    D;
+mst_model U_MST_MODEL (
+     .D               (D)
+);
 
 fcp_core U_FCP_CORE (
      .clk               (sclk)
     ,.rstn              (rstn)
     ,.is_support_12v    (1'b1)
     ,.out_volt          ()
-    ,.data              (U_MST_MODEL.x)
+    ,.data              (D)
 );
 
 endmodule

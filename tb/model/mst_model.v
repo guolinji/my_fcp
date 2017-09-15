@@ -1,8 +1,10 @@
 `timescale 1us / 1ns
 
 module mst_model(
+    D
 );
 
+inout D;
 localparam UI            = 160;
 localparam UI_2          = UI*2;
 localparam UI_3          = UI*3;
@@ -182,10 +184,10 @@ initial begin
     ping();
 end
 
-wire x;
-assign x = data;
+wire D;
+assign D = data;
 
-pulldown (x);
+pulldown (D);
 
 endmodule
 
