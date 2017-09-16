@@ -85,6 +85,9 @@ module fcp_physical_layer (
     rx_data_valid,
     tx_done,
     // IO
+    //data
+    out_en,
+    data_out,
     data
 );
 
@@ -107,7 +110,10 @@ output      [23:0]  rx_data;
 output              rx_data_valid;
 output              tx_done;
 
-inout               data;
+//inout               data;
+output              out_en;
+output              data_out;
+input               data;
 
 parameter MULT_125K     = 8;
 parameter UI_CYCLE      = 20*MULT_125K;
@@ -146,7 +152,7 @@ wire [7:0]  tune_cycle;
 //========================================================================================
 //========================================================================================
 // For inout port
-assign data     = out_en ? data_out : 1'bz;
+//assign data     = out_en ? data_out : 1'bz;
 assign data_in  = data;
 
 always @(posedge clk or negedge rstn) begin
@@ -313,6 +319,8 @@ fcp_tx_ctrl #(.UI_CYCLE(UI_CYCLE)) U_TX_CTRL (
 
 
 endmodule
+
+
 
 
 

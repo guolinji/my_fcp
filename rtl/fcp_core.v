@@ -27,6 +27,9 @@ module fcp_core (
     // O
     out_volt,
     // IO
+    //data
+    out_en,
+    data_out,
     data
 );
 
@@ -38,7 +41,10 @@ input           rstn;
 input           is_support_12v;
 output [1:0]    out_volt; //00:5V    01:9v    10:12v    11:Reserved
 
-inout       data;
+//inout       data;
+output      out_en;
+output      data_out;
+input       data;
 //================================
 // Signals
 //================================
@@ -94,8 +100,13 @@ fcp_physical_layer U_FCP_PYSICAL_LAYER (
         ,.rx_data_valid         (rx_data_valid)
         ,.tx_done               (tx_done)
         // IO
+        //,.data                  (data)
+        ,.out_en                (out_en)
+        ,.data_out              (data_out)
         ,.data                  (data)
         );
 
 endmodule
+
+
 
